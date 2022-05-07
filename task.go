@@ -11,17 +11,35 @@ package zdpgo_task
 type Task struct {
 	Config            *Config                            // 配置
 	TaskMap           map[string]TaskContainer           // 任务字典
-	BackgroundTaskMap map[string]BackgroundTaskContainer // 任务字典
+	BackgroundTaskMap map[string]BackgroundTaskContainer // 后台任务字典
+	TimerTaskMap      map[string]TimerTaskContainer      // 定时任务字典
 }
+
+// TaskFunc 普通任务函数
 type TaskFunc func(...interface{}) (TaskResult, error)
+
+// TaskContainer 普通任务容器
 type TaskContainer struct {
-	Running bool     // 是否正在运行
-	Func    TaskFunc // 任务
+	Func TaskFunc // 任务
 }
+
+// BackgroundTaskFunc 后台任务方法
 type BackgroundTaskFunc func(chan interface{}, ...interface{})
+
+// BackgroundTaskContainer 后台任务容器
 type BackgroundTaskContainer struct {
-	Running bool               // 是否正在运行
-	Func    BackgroundTaskFunc // 任务
+	Func BackgroundTaskFunc // 任务
+}
+
+// TimerTaskFunc 定时器任务方法
+type TimerTaskFunc func(...interface{})
+
+// TimerTaskContainer 定时任务容器
+type TimerTaskContainer struct {
+	Running      bool                                 // 是否正在运行
+	ExitChan     chan bool                            // 控制是否退出的通道
+	TimerSeconds int                                  // 监听时间
+	Func         func(chan bool, int, ...interface{}) // 任务
 }
 
 type TaskResult struct {

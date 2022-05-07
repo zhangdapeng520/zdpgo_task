@@ -50,3 +50,26 @@ func TestTask_AddBackground(t *testing.T) {
 	task.StartBackground("test1", ch, 1, 2, 3, 4)
 	<-ch
 }
+
+func TestTask_AddTimer(t *testing.T) {
+	task := getTask()
+
+	// 后台任务
+	f := func(i ...interface{}) {
+		for {
+			fmt.Println("接收到的参数：", i)
+			time.Sleep(time.Second)
+		}
+	}
+
+	// 添加后台任务
+	task.AddTimer("test1", f)
+
+	// 执行后台任务
+	task.StartTimer("test1", 1, 2, 3, 4)
+
+	// 3秒中以后停止后台任务
+	time.Sleep(time.Second * 3)
+	fmt.Println("准备停止后台任务。。。")
+	task.StopTimer("test1")
+}

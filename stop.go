@@ -7,3 +7,17 @@ package zdpgo_task
 @Software: Goland2021.3.1
 @Description: 停止任务相关
 */
+
+// StopTimer 停止定时器
+func (task *Task) StopTimer(taskName string) {
+	if taskName == "" {
+		return
+	}
+	if task.TimerTaskMap == nil {
+		return
+	}
+	if taskContainer, ok := task.TimerTaskMap[taskName]; ok {
+		taskContainer.ExitChan <- true // 传入退出信号
+		taskContainer.Running = false  // 修改运行状态
+	}
+}

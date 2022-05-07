@@ -13,10 +13,7 @@ func (task *Task) Start(taskName string, args ...interface{}) (result TaskResult
 		return
 	}
 	if taskContainer, ok := task.TaskMap[taskName]; ok {
-		if !taskContainer.Running {
-			result, err = taskContainer.Func(args...)
-			return
-		}
+		result, err = taskContainer.Func(args...)
 	}
 	return
 }
@@ -26,8 +23,22 @@ func (task *Task) StartBackground(taskName string, ch chan interface{}, args ...
 		return
 	}
 	if taskContainer, ok := task.BackgroundTaskMap[taskName]; ok {
+		go taskContainer.Func(ch, args...)
+	}
+	return
+}
+
+// StartTimer 启动定时任务
+func (task *Task) StartTimer(taskName string, args ...interface{}) {
+	if task.TimerTaskMap == nil {
+		return
+	}
+	if taskContainer, ok := task.TimerTaskMap[taskName]; ok {
 		if !taskContainer.Running {
-			go taskContainer.Func(ch, args...)
+			if taskContainer.TimerSeconds <= 0 {
+				taskContainer.TimerSeconds = 1 // 默认1秒
+			}
+			go taskContainer.Func(taskContainer.ExitChan, taskContainer.TimerSeconds, args...)
 			taskContainer.Running = true
 			return
 		}
