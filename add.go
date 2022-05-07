@@ -20,3 +20,16 @@ func (task *Task) Add(taskName string, taskFunc TaskFunc) {
 		Func:    taskFunc,
 	}
 }
+
+func (task *Task) AddBackground(taskName string, taskFunc BackgroundTaskFunc) {
+	if taskName == "" {
+		return
+	}
+	if task.BackgroundTaskMap == nil {
+		task.BackgroundTaskMap = make(map[string]BackgroundTaskContainer)
+	}
+	task.BackgroundTaskMap[taskName] = BackgroundTaskContainer{
+		Running: false,
+		Func:    taskFunc,
+	}
+}

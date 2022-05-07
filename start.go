@@ -20,3 +20,17 @@ func (task *Task) Start(taskName string, args ...interface{}) (result TaskResult
 	}
 	return
 }
+
+func (task *Task) StartBackground(taskName string, ch chan interface{}, args ...interface{}) {
+	if task.BackgroundTaskMap == nil {
+		return
+	}
+	if taskContainer, ok := task.BackgroundTaskMap[taskName]; ok {
+		if !taskContainer.Running {
+			go taskContainer.Func(ch, args...)
+			taskContainer.Running = true
+			return
+		}
+	}
+	return
+}

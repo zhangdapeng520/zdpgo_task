@@ -9,13 +9,19 @@ package zdpgo_task
 */
 
 type Task struct {
-	Config  *Config                  // 配置
-	TaskMap map[string]TaskContainer // 任务字典
+	Config            *Config                            // 配置
+	TaskMap           map[string]TaskContainer           // 任务字典
+	BackgroundTaskMap map[string]BackgroundTaskContainer // 任务字典
 }
 type TaskFunc func(...interface{}) (TaskResult, error)
 type TaskContainer struct {
 	Running bool     // 是否正在运行
 	Func    TaskFunc // 任务
+}
+type BackgroundTaskFunc func(chan interface{}, ...interface{})
+type BackgroundTaskContainer struct {
+	Running bool               // 是否正在运行
+	Func    BackgroundTaskFunc // 任务
 }
 
 type TaskResult struct {

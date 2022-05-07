@@ -3,6 +3,7 @@ package zdpgo_task
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 /*
@@ -33,4 +34,19 @@ func TestTask_Add(t *testing.T) {
 	}
 	value := result.Value.(int)
 	fmt.Println(value)
+}
+
+func TestTask_AddBackground(t *testing.T) {
+	task := getTask()
+	f := func(ch chan interface{}, i ...interface{}) {
+		for j := 0; j < 10; j++ {
+			fmt.Println(i...)
+			time.Sleep(time.Second)
+		}
+		ch <- true
+	}
+	task.AddBackground("test1", f)
+	ch := make(chan interface{}, 1)
+	task.StartBackground("test1", ch, 1, 2, 3, 4)
+	<-ch
 }
