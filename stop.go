@@ -8,6 +8,19 @@ package zdpgo_task
 @Description: 停止任务相关
 */
 
+// StopBackground 停止定时器
+func (task *Task) StopBackground(taskName string, quit chan bool) {
+	if taskName == "" {
+		return
+	}
+	if task.BackgroundTaskMap == nil {
+		return
+	}
+	if _, ok := task.BackgroundTaskMap[taskName]; ok {
+		quit <- true // 传入退出信号
+	}
+}
+
 // StopTimer 停止定时器
 func (task *Task) StopTimer(taskName string) {
 	if taskName == "" {

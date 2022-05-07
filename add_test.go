@@ -2,6 +2,7 @@ package zdpgo_task
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -38,17 +39,29 @@ func TestTask_Add(t *testing.T) {
 
 func TestTask_AddBackground(t *testing.T) {
 	task := getTask()
-	f := func(ch chan interface{}, i ...interface{}) {
-		for j := 0; j < 10; j++ {
-			fmt.Println(i...)
-			time.Sleep(time.Second)
+	var chs []chan bool
+	for i := 0; i < 100; i++ {
+		taskName := fmt.Sprintf("test%d", i)
+		f := func(args ...interface{}) {
+			for j := 0; j < 10; j++ {
+				fmt.Println(j, args)
+			}
 		}
-		ch <- true
+		task.AddBackground(taskName, f)
+		ch := make(chan bool)
+		task.StartBackground(taskName, ch, 1, 2, 3, 4)
+		chs = append(chs, ch)
 	}
-	task.AddBackground("test1", f)
-	ch := make(chan interface{}, 1)
-	task.StartBackground("test1", ch, 1, 2, 3, 4)
-	<-ch
+	fmt.Println("当前goroutine数量。。。", runtime.NumGoroutine())
+
+	time.Sleep(time.Second * 3)
+	for i := 0; i < 100; i++ {
+		task.StopBackground(fmt.Sprintf("test%d", i), chs[i])
+	}
+	runtime.GC()
+	time.Sleep(time.Second * 20)
+	fmt.Println("当前goroutine数量。。。", runtime.NumGoroutine())
+
 }
 
 func TestTask_AddTimer(t *testing.T) {

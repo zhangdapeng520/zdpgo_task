@@ -18,14 +18,13 @@ func (task *Task) Start(taskName string, args ...interface{}) (result TaskResult
 	return
 }
 
-func (task *Task) StartBackground(taskName string, ch chan interface{}, args ...interface{}) {
+func (task *Task) StartBackground(taskName string, quit chan bool, args ...interface{}) {
 	if task.BackgroundTaskMap == nil {
 		return
 	}
 	if taskContainer, ok := task.BackgroundTaskMap[taskName]; ok {
-		go taskContainer.Func(ch, args...)
+		taskContainer.Func(quit, args...)
 	}
-	return
 }
 
 // StartTimer 启动定时任务

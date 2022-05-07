@@ -24,11 +24,13 @@ type TaskContainer struct {
 }
 
 // BackgroundTaskFunc 后台任务方法
-type BackgroundTaskFunc func(chan interface{}, ...interface{})
+type BackgroundTaskFunc func(...interface{})
 
 // BackgroundTaskContainer 后台任务容器
 type BackgroundTaskContainer struct {
-	Func BackgroundTaskFunc // 任务
+	Running  bool
+	ExitChan chan bool                       // 退出通道
+	Func     func(chan bool, ...interface{}) // 任务
 }
 
 // TimerTaskFunc 定时器任务方法
