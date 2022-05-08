@@ -2,6 +2,7 @@ package zdpgo_task
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -97,4 +98,31 @@ func (t *Task) RunTimeout(intervalMilliSecond, timeoutSecond int, taskFunc func(
 
 	// 将取消函数返回，用于主动取消任务
 	return cancel
+}
+
+// RunWaitTasks 同时执行多个任务
+// @param taskFuncList 任务列表
+// @param exitFuncList 任务执行完毕后要执行的函数列表
+func (t *Task) RunWaitTasks(taskFuncList []func(), exitFuncList ...func()) {
+	// 创建等待组
+	var wg = new(sync.WaitGroup)
+
+	// 执行任务列表
+	for _, taskFunc := range taskFuncList {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, taskFunc func()) {
+			defer wg.Done()
+			taskFunc() // 执行核心函数
+		}(wg, taskFunc)
+	}
+
+	// 等待所有任务结束
+	wg.Wait()
+
+	// 执行退出函数
+	if exitFuncList != nil && len(exitFuncList) > 0 {
+		for _, ef := range exitFuncList {
+			ef()
+		}
+	}
 }

@@ -65,3 +65,23 @@ func TestTask_RunTimeout(t *testing.T) {
 	time.Sleep(time.Second)
 	fmt.Println(runtime.NumGoroutine())
 }
+
+// 测试运行多个任务
+func TestTask_RunWaitTasks(t *testing.T) {
+	task := getTask()
+	var funcs []func()
+	funcs = append(funcs, func() {
+		time.Sleep(time.Second * 3)
+		fmt.Println("函数1")
+	})
+	funcs = append(funcs, func() {
+		time.Sleep(time.Second * 2)
+		fmt.Println("函数2")
+	})
+	funcs = append(funcs, func() {
+		time.Sleep(time.Second * 1)
+		fmt.Println("函数3")
+	})
+
+	task.RunWaitTasks(funcs)
+}
