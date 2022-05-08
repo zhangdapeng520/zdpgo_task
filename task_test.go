@@ -1,6 +1,7 @@
 package zdpgo_task
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"testing"
@@ -32,7 +33,7 @@ func TestTask_RunTimer(t *testing.T) {
 
 	// 执行定时任务
 	fmt.Println(runtime.NumGoroutine())
-	task.RunTimer(quit, 1, func(args ...interface{}) {
+	task.RunTimer(quit, 1000, func(args ...interface{}) {
 		fmt.Println("要执行的任务。。。。")
 	})
 	fmt.Println(runtime.NumGoroutine())
@@ -46,5 +47,21 @@ func TestTask_RunTimer(t *testing.T) {
 	// 退出主程序
 	time.Sleep(time.Second * 10)
 	fmt.Println("main exit")
+	fmt.Println(runtime.NumGoroutine())
+}
+
+// 测试运行超时任务
+func TestTask_RunTimeout(t *testing.T) {
+	task := getTask()
+	var cancel context.CancelFunc
+	cancel = task.RunTimeout(500, 7, func(args ...interface{}) {
+		fmt.Println("任务执行中。。。")
+	})
+	fmt.Println(runtime.NumGoroutine())
+
+	time.Sleep(time.Second * 6)
+	cancel()
+
+	time.Sleep(time.Second)
 	fmt.Println(runtime.NumGoroutine())
 }
