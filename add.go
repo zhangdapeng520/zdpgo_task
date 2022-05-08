@@ -1,7 +1,6 @@
 package zdpgo_task
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -32,14 +31,16 @@ func (task *Task) AddBackground(taskName string, taskFunc BackgroundTaskFunc) {
 	if task.BackgroundTaskMap == nil {
 		task.BackgroundTaskMap = make(map[string]BackgroundTaskContainer)
 	}
+
+	ChannelMap[taskName] = make(chan struct{})
 	task.BackgroundTaskMap[taskName] = BackgroundTaskContainer{
 		ExitChan: make(chan bool),
-		Func: func(quit chan bool, args ...interface{}) {
-			go func(quit chan bool) {
+		Func: func(args ...interface{}) {
+			quit := ChannelMap[taskName]
+			go func(quit chan struct{}) {
 				for {
 					select {
 					case <-quit:
-						fmt.Println("监听到退出信号。。。")
 						return
 					default:
 						taskFunc(args...)

@@ -9,7 +9,7 @@ package zdpgo_task
 */
 
 // StopBackground 停止定时器
-func (task *Task) StopBackground(taskName string, quit chan bool) {
+func (task *Task) StopBackground(taskName string) {
 	if taskName == "" {
 		return
 	}
@@ -17,7 +17,9 @@ func (task *Task) StopBackground(taskName string, quit chan bool) {
 		return
 	}
 	if _, ok := task.BackgroundTaskMap[taskName]; ok {
-		quit <- true // 传入退出信号
+		if quit, ok := ChannelMap[taskName]; ok {
+			quit <- struct{}{} // 传入退出信号
+		}
 	}
 }
 

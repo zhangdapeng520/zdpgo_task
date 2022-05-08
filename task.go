@@ -28,9 +28,8 @@ type BackgroundTaskFunc func(...interface{})
 
 // BackgroundTaskContainer 后台任务容器
 type BackgroundTaskContainer struct {
-	Running  bool
-	ExitChan chan bool                       // 退出通道
-	Func     func(chan bool, ...interface{}) // 任务
+	Running bool
+	Func    func(...interface{}) // 任务
 }
 
 // TimerTaskFunc 定时器任务方法

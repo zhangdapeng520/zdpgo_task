@@ -39,27 +39,24 @@ func TestTask_Add(t *testing.T) {
 
 func TestTask_AddBackground(t *testing.T) {
 	task := getTask()
-	var chs []chan bool
 	for i := 0; i < 100; i++ {
 		taskName := fmt.Sprintf("test%d", i)
 		f := func(args ...interface{}) {
 			for j := 0; j < 10; j++ {
-				fmt.Println(j, args)
 			}
 		}
 		task.AddBackground(taskName, f)
-		ch := make(chan bool)
-		task.StartBackground(taskName, ch, 1, 2, 3, 4)
-		chs = append(chs, ch)
+		task.StartBackground(taskName, 1, 2, 3, 4)
 	}
 	fmt.Println("当前goroutine数量。。。", runtime.NumGoroutine())
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 1)
 	for i := 0; i < 100; i++ {
-		task.StopBackground(fmt.Sprintf("test%d", i), chs[i])
+		task.StopBackground(fmt.Sprintf("test%d", i))
 	}
-	runtime.GC()
-	time.Sleep(time.Second * 20)
+
+	fmt.Println("当前goroutine数量。。。", runtime.NumGoroutine())
+	time.Sleep(time.Second * 3)
 	fmt.Println("当前goroutine数量。。。", runtime.NumGoroutine())
 
 }

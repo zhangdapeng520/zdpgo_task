@@ -18,12 +18,12 @@ func (task *Task) Start(taskName string, args ...interface{}) (result TaskResult
 	return
 }
 
-func (task *Task) StartBackground(taskName string, quit chan bool, args ...interface{}) {
+func (task *Task) StartBackground(taskName string, args ...interface{}) {
 	if task.BackgroundTaskMap == nil {
 		return
 	}
 	if taskContainer, ok := task.BackgroundTaskMap[taskName]; ok {
-		taskContainer.Func(quit, args...)
+		taskContainer.Func(args...)
 	}
 }
 
