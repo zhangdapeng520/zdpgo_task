@@ -1,5 +1,9 @@
 package zdpgo_task
 
+import (
+	"time"
+)
+
 /*
 @Time : 2022/5/7 12:55
 @Author : 张大鹏
@@ -9,51 +13,47 @@ package zdpgo_task
 */
 
 type Task struct {
-	Config            *Config                            // 配置
-	TaskMap           map[string]TaskContainer           // 任务字典
-	BackgroundTaskMap map[string]BackgroundTaskContainer // 后台任务字典
-	TimerTaskMap      map[string]TimerTaskContainer      // 定时任务字典
-}
-
-// TaskFunc 普通任务函数
-type TaskFunc func(...interface{}) (TaskResult, error)
-
-// TaskContainer 普通任务容器
-type TaskContainer struct {
-	Func TaskFunc // 任务
-}
-
-// BackgroundTaskFunc 后台任务方法
-type BackgroundTaskFunc func(...interface{})
-
-// BackgroundTaskContainer 后台任务容器
-type BackgroundTaskContainer struct {
-	Running bool
-	Func    func(...interface{}) // 任务
-}
-
-// TimerTaskFunc 定时器任务方法
-type TimerTaskFunc func(...interface{})
-
-// TimerTaskContainer 定时任务容器
-type TimerTaskContainer struct {
-	Running      bool                                 // 是否正在运行
-	ExitChan     chan bool                            // 控制是否退出的通道
-	TimerSeconds int                                  // 监听时间
-	Func         func(chan bool, int, ...interface{}) // 任务
-}
-
-type TaskResult struct {
-	Value interface{}
+	Config *Config // 配置
 }
 
 func New() *Task {
-	t := Task{}
-	return &t
+	return NewWithConfig(Config{})
 }
 
 func NewWithConfig(cfg Config) *Task {
 	t := Task{}
 	t.Config = &cfg
 	return &t
+}
+
+// RunTimer 执行定时任务
+// @param stopCh 退出通道，用于通知什么时候退出此任务
+// @param timerSeconds 定时间隔，每隔多久执行一次任务，单位秒
+// @param taskFunc 要执行的任务函数
+// @param exitFunc 退出任务之前要执行的函数列表
+func (t *Task) RunTimer(stopCh <-chan struct{}, timerSeconds int, taskFunc func(...interface{}), exitFunc ...func()) {
+	go func() {
+		// 任务执行完毕之后的退出函数
+		defer func() {
+			if exitFunc != nil && len(exitFunc) > 0 {
+				for _, ef := range exitFunc {
+					ef()
+				}
+			}
+		}()
+
+		// 定时器
+		timer := time.NewTicker(time.Second * time.Duration(timerSeconds))
+
+		// 定时执行任务
+		for range timer.C {
+			select {
+			case <-stopCh:
+				return
+			default:
+				taskFunc()
+			}
+		}
+	}()
+	return
 }
