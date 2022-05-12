@@ -51,10 +51,10 @@ func TestTask_RunTimer(t *testing.T) {
 }
 
 // 测试运行超时任务
-func TestTask_RunTimeout(t *testing.T) {
+func TestTask_RunTimerTimeout(t *testing.T) {
 	task := getTask()
 	var cancel context.CancelFunc
-	cancel = task.RunTimeout(500, 7, func(args ...interface{}) {
+	cancel = task.RunTimerTimeout(500, 7, func(args ...interface{}) {
 		fmt.Println("任务执行中。。。")
 	})
 	fmt.Println(runtime.NumGoroutine())
@@ -84,4 +84,42 @@ func TestTask_RunWaitTasks(t *testing.T) {
 	})
 
 	task.RunWaitTasks(funcs)
+}
+
+// 测试任务超时结束
+func TestTask_RunExitTimeout1(t *testing.T) {
+	task := getTask()
+
+	// 普通任务
+	task.RunExitTimeout(3, func() {
+		fmt.Println("正常任务")
+	}, func() {
+		fmt.Println("任务正常结束")
+	}, func() {
+		fmt.Println("任务超时技术")
+	})
+	fmt.Println("====================")
+
+	// 任务超时
+	task.RunExitTimeout(3, func() {
+		fmt.Println("正常任务")
+		time.Sleep(time.Second * 4)
+	}, func() {
+		fmt.Println("任务正常结束")
+	}, func() {
+		fmt.Println("任务超时结束")
+	})
+	fmt.Println("====================")
+
+	// 任务循环超时
+	task.RunExitTimeout(3, func() {
+		fmt.Println("正常任务")
+		for {
+			time.Sleep(time.Second * 2)
+		}
+	}, func() {
+		fmt.Println("任务正常结束")
+	}, func() {
+		fmt.Println("任务超时结束")
+	})
 }

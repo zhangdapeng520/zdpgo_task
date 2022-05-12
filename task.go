@@ -2,6 +2,7 @@ package zdpgo_task
 
 import (
 	"context"
+	"github.com/zhangdapeng520/zdpgo_log"
 	"sync"
 	"time"
 )
@@ -15,16 +16,39 @@ import (
 */
 
 type Task struct {
-	Config *Config // 配置
+	Config *Config        // 配置
+	Log    *zdpgo_log.Log // 日志
 }
 
 func New() *Task {
 	return NewWithConfig(Config{})
 }
 
-func NewWithConfig(cfg Config) *Task {
+func NewWithConfig(config Config) *Task {
 	t := Task{}
-	t.Config = &cfg
+
+	// 创建日志
+	if config.LogFilePath == "" {
+		config.LogFilePath = "logs/zdpgo/zdpgo_task.log"
+	}
+	logConfig := zdpgo_log.Config{
+		Debug:         false,
+		LogLevel:      "",
+		IsWriteDebug:  false,
+		IsShowConsole: false,
+		OpenJsonLog:   false,
+		OpenFileName:  false,
+		LogFilePath:   "",
+		MaxSize:       0,
+		MaxBackups:    0,
+		MaxAge:        0,
+		Compress:      false,
+	}
+	if config.Debug {
+		logConfig.IsShowConsole = true
+	}
+	t.Log = zdpgo_log.NewWithConfig(logConfig)
+	t.Config = &config
 	return &t
 }
 
@@ -60,13 +84,13 @@ func (t *Task) RunTimer(stopCh <-chan struct{}, timerMilliSeconds int, taskFunc 
 	}()
 }
 
-// RunTimeout 运行超时任务，任务会按照指定间隔时间重复执行，超过指定时间后自动退出，也可以主动取消
+// RunTimerTimeout 运行间隔超时任务，任务会按照指定间隔时间重复执行，超过指定时间后自动退出，也可以主动取消
 // @param intervalMilliSecond 间隔时间，单位毫秒
 // @param timeoutSecond 超时时间，单位秒
 // @param taskFunc 任务函数
 // @param taskFunc 任务退出执行要执行的函数列表
 // @return context.CancelFunc 取消函数，可以用该函数对象主动取消任务
-func (t *Task) RunTimeout(intervalMilliSecond, timeoutSecond int, taskFunc func(...interface{}),
+func (t *Task) RunTimerTimeout(intervalMilliSecond, timeoutSecond int, taskFunc func(...interface{}),
 	exitFunc ...func()) context.CancelFunc {
 	// 创建的上下文对象和取消函数
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeoutSecond))
@@ -124,5 +148,29 @@ func (t *Task) RunWaitTasks(taskFuncList []func(), exitFuncList ...func()) {
 		for _, ef := range exitFuncList {
 			ef()
 		}
+	}
+}
+
+// RunExitTimeout 运行退出超时任务，达到超时时间后自动结束该任务
+// @param timeoutSecond 超时时间
+// @param taskFunc 要执行的任务方法
+// @param taskFinishFunc 任务正常结束执行的方法
+// @param timeoutFunc 任务超时结束执行的方法
+func (t *Task) RunExitTimeout(timeoutSecond int, taskFunc func(), taskFinishFunc func(), timeoutFunc func()) {
+	// 创建一个管道
+	ch := make(chan struct{}, 1)
+
+	// 异步执行任务，执行完毕发送通知
+	go func(taskFunc func()) {
+		taskFunc()
+		ch <- struct{}{}
+	}(taskFunc)
+
+	// 监听任务
+	select {
+	case <-ch: // 正常结束
+		taskFinishFunc()
+	case <-time.After(time.Duration(timeoutSecond) * time.Second): // 超时结束
+		timeoutFunc()
 	}
 }
