@@ -17,7 +17,9 @@ import (
 */
 
 func getTask() *Task {
-	return New()
+	return NewWithConfig(Config{
+		Debug: true,
+	})
 }
 
 // 测试运行定时任务
@@ -87,7 +89,7 @@ func TestTask_RunWaitTasks(t *testing.T) {
 }
 
 // 测试任务超时结束
-func TestTask_RunExitTimeout1(t *testing.T) {
+func TestTask_RunExitTimeout(t *testing.T) {
 	task := getTask()
 
 	// 普通任务
@@ -122,4 +124,21 @@ func TestTask_RunExitTimeout1(t *testing.T) {
 	}, func() {
 		fmt.Println("任务超时结束")
 	})
+	fmt.Println("====================")
+
+	// 校验任务是否正常结束的布尔值
+	tmpFlag := make(chan bool, 1)
+	task.RunExitTimeout(3, func() {
+		fmt.Println("正常任务")
+		for i := 0; i < 3; i++ {
+			time.Sleep(time.Second * 2)
+		}
+	}, func() {
+		fmt.Println("任务正常结束")
+		tmpFlag <- true
+	}, func() {
+		fmt.Println("任务超时结束")
+		tmpFlag <- false
+	})
+	fmt.Println(<-tmpFlag) // 取出结果
 }

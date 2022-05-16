@@ -31,23 +31,7 @@ func NewWithConfig(config Config) *Task {
 	if config.LogFilePath == "" {
 		config.LogFilePath = "logs/zdpgo/zdpgo_task.log"
 	}
-	logConfig := zdpgo_log.Config{
-		Debug:         false,
-		LogLevel:      "",
-		IsWriteDebug:  false,
-		IsShowConsole: false,
-		OpenJsonLog:   false,
-		OpenFileName:  false,
-		LogFilePath:   "",
-		MaxSize:       0,
-		MaxBackups:    0,
-		MaxAge:        0,
-		Compress:      false,
-	}
-	if config.Debug {
-		logConfig.IsShowConsole = true
-	}
-	t.Log = zdpgo_log.NewWithConfig(logConfig)
+	t.Log = zdpgo_log.NewWithDebug(config.Debug, config.LogFilePath)
 	t.Config = &config
 	return &t
 }
@@ -157,20 +141,33 @@ func (t *Task) RunWaitTasks(taskFuncList []func(), exitFuncList ...func()) {
 // @param taskFinishFunc 任务正常结束执行的方法
 // @param timeoutFunc 任务超时结束执行的方法
 func (t *Task) RunExitTimeout(timeoutSecond int, taskFunc func(), taskFinishFunc func(), timeoutFunc func()) {
-	// 创建一个管道
-	ch := make(chan struct{}, 1)
+	// 创建通道
+	ch := make(chan bool, 1)
+	defer close(ch)
 
-	// 异步执行任务，执行完毕发送通知
-	go func(taskFunc func()) {
+	// 执行任务
+	go func() {
+		// 处理通道关闭触发的异常
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log.Debug("向已关闭的通道写入数据", "error", r)
+			}
+		}()
+
+		// 执行任务
 		taskFunc()
-		ch <- struct{}{}
-	}(taskFunc)
+		ch <- true
+	}()
 
-	// 监听任务
+	// 创建定时器，当函数返回时，它所使用的所有通道都已被清除。
+	timer := time.NewTimer(time.Duration(timeoutSecond) * time.Second)
+	defer timer.Stop()
+
+	// 监听任务结束情况
 	select {
-	case <-ch: // 正常结束
+	case <-ch:
 		taskFinishFunc()
-	case <-time.After(time.Duration(timeoutSecond) * time.Second): // 超时结束
+	case <-timer.C: // 监听到定时器（已超时）
 		timeoutFunc()
 	}
 }
