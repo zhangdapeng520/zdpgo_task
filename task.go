@@ -3,6 +3,7 @@ package zdpgo_task
 import (
 	"context"
 	"github.com/zhangdapeng520/zdpgo_log"
+	"github.com/zhangdapeng520/zdpgo_task/ants"
 	"sync"
 	"time"
 )
@@ -18,22 +19,44 @@ import (
 type Task struct {
 	Config *Config        // 配置
 	Log    *zdpgo_log.Log // 日志
+	Pool   *ants.Pool
 }
 
-func New() *Task {
-	return NewWithConfig(Config{})
+func New(log *zdpgo_log.Log) *Task {
+	return NewWithConfig(&Config{}, log)
 }
 
-func NewWithConfig(config Config) *Task {
-	t := Task{}
+func NewWithConfig(config *Config, log *zdpgo_log.Log) *Task {
+	t := &Task{}
 
-	// 创建日志
-	if config.LogFilePath == "" {
-		config.LogFilePath = "logs/zdpgo/zdpgo_task.log"
+	// 实例化
+	t.Log = log
+	if config.PoolSize == 0 {
+		config.PoolSize = 333
 	}
-	t.Log = zdpgo_log.NewWithDebug(config.Debug, config.LogFilePath)
-	t.Config = &config
-	return &t
+	t.Config = config
+
+	// 任务阻塞：等池中的任务执行完毕了，有空余goroutine可以用了再执行新的任务
+	t.Pool, _ = ants.NewPool(config.PoolSize, ants.WithNonblocking(false))
+
+	// 返回
+	return t
+}
+
+// AddTask 添加任务
+func (t *Task) AddTask(taskFunc func()) {
+	err := t.Pool.Submit(taskFunc)
+	if err != nil {
+		t.Log.Error("添加任务失败", "error", err)
+	}
+}
+
+func (t *Task) Close() {
+	t.Pool.Release()
+}
+
+func (t Task) GetGoroutineNum() int {
+	return t.Pool.Running()
 }
 
 // RunTimer 执行定时任务，任务会按照指定间隔时间重复执行
@@ -41,8 +64,7 @@ func NewWithConfig(config Config) *Task {
 // @param timerSeconds 定时间隔，每隔多久执行一次任务，单位毫秒
 // @param taskFunc 要执行的任务函数
 // @param exitFunc 退出任务之前要执行的函数列表
-func (t *Task) RunTimer(stopCh <-chan struct{}, timerMilliSeconds int, taskFunc func(...interface{}),
-	exitFunc ...func()) {
+func (t *Task) RunTimer(stopCh <-chan struct{}, timerMilliSeconds int, taskFunc func(...interface{}), exitFunc ...func()) {
 	go func() {
 		// 任务执行完毕之后的退出函数
 		defer func() {
@@ -74,8 +96,7 @@ func (t *Task) RunTimer(stopCh <-chan struct{}, timerMilliSeconds int, taskFunc 
 // @param taskFunc 任务函数
 // @param taskFunc 任务退出执行要执行的函数列表
 // @return context.CancelFunc 取消函数，可以用该函数对象主动取消任务
-func (t *Task) RunTimerTimeout(intervalMilliSecond, timeoutSecond int, taskFunc func(...interface{}),
-	exitFunc ...func()) context.CancelFunc {
+func (t *Task) RunTimerTimeout(intervalMilliSecond, timeoutSecond int, taskFunc func(...interface{}), exitFunc ...func()) context.CancelFunc {
 	// 创建的上下文对象和取消函数
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeoutSecond))
 

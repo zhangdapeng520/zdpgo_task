@@ -9,6 +9,5 @@ package zdpgo_task
 */
 
 type Config struct {
-	Debug       bool   `yaml:"debug" json:"debug"`                 // 是否为Debug模式
-	LogFilePath string `yaml:"log_file_path" json:"log_file_path"` // 日志路径
+	PoolSize int `json:"task_num"`
 }

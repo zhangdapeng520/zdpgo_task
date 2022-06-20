@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/mborders/artifex"
+	"time"
 )
 
 /*
@@ -14,15 +15,21 @@ import (
 */
 
 func main() {
-	// 10 workers, 100 max in job queue
+	// 开启10个goroutine，最多100个任务队列
 	d := artifex.NewDispatcher(10, 100)
 	d.Start()
 	defer d.Stop()
-	err := d.Dispatch(func() {
-		// do something
-		fmt.Println("do something111")
-	})
-	if err != nil {
-		panic(err)
+
+	// 分配100个任务
+	for i := 0; i < 1000; i++ {
+		err := d.Dispatch(func() {
+			// do something
+			fmt.Println("do something111")
+		})
+		if err != nil {
+			panic(err)
+		}
 	}
+
+	time.Sleep(time.Second * 3)
 }
