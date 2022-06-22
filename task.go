@@ -17,9 +17,11 @@ import (
 */
 
 type Task struct {
-	Config *Config        // 配置
-	Log    *zdpgo_log.Log // 日志
-	Pool   *ants.Pool
+	Config       *Config        // 配置
+	Log          *zdpgo_log.Log // 日志
+	Pool         *ants.Pool
+	PoolWithFunc *ants.PoolWithFunc
+	Wg           *sync.WaitGroup
 }
 
 func New(log *zdpgo_log.Log) *Task {
@@ -35,9 +37,18 @@ func NewWithConfig(config *Config, log *zdpgo_log.Log) *Task {
 		config.PoolSize = 333
 	}
 	t.Config = config
+	t.Wg = new(sync.WaitGroup)
 
 	// 任务阻塞：等池中的任务执行完毕了，有空余goroutine可以用了再执行新的任务
 	t.Pool, _ = ants.NewPool(config.PoolSize, ants.WithNonblocking(false))
+
+	// 添加带参数的任务
+	if config.TaskFuncWithArg != nil {
+		t.PoolWithFunc, _ = ants.NewPoolWithFunc(config.PoolSize, func(arg interface{}) {
+			config.TaskFuncWithArg(arg)
+			t.Wg.Done()
+		})
+	}
 
 	// 返回
 	return t
@@ -51,8 +62,19 @@ func (t *Task) AddTask(taskFunc func()) {
 	}
 }
 
+// AddTaskWithArg 添加携带参数的任务
+func (t *Task) AddTaskWithArg(arg interface{}) {
+	err := t.PoolWithFunc.Invoke(arg)
+	if err != nil {
+		t.Log.Error("添加带参数任务失败", "error", err, "arg", arg)
+	}
+}
+
 func (t *Task) Close() {
 	t.Pool.Release()
+	if t.PoolWithFunc != nil {
+		t.PoolWithFunc.Release()
+	}
 }
 
 func (t Task) GetGoroutineNum() int {
