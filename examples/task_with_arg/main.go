@@ -37,7 +37,6 @@ func main() {
 	// 提交任务
 	fmt.Println("提交任务。。。")
 	for i := 0; i < runTimes; i++ {
-		task.Wg.Add(1)
 		seconds := rand.Intn(10)
 		task.AddTaskWithArg(seconds)
 	}

@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/zhangdapeng520/zdpgo_log"
 )
 
 /*
@@ -17,9 +19,7 @@ import (
 */
 
 func getTask() *Task {
-	return NewWithConfig(Config{
-		Debug: true,
-	})
+	return New(zdpgo_log.Tmp)
 }
 
 // 测试运行定时任务
@@ -141,4 +141,18 @@ func TestTask_RunExitTimeout(t *testing.T) {
 		tmpFlag <- false
 	})
 	fmt.Println(<-tmpFlag) // 取出结果
+}
+
+// 测试任务超时结束
+func TestTask_AddTaskWithArg(t *testing.T) {
+	task := NewWithConfig(&Config{
+		PoolSize:        100,
+		TaskFuncWithArg: func(arg interface{}) {},
+	}, zdpgo_log.Tmp)
+
+	// 普通任务
+	for i := 0; i < 100000; i++ {
+		task.AddTaskWithArg(i)
+	}
+	task.Wg.Wait()
 }

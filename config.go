@@ -9,6 +9,6 @@ package zdpgo_task
 */
 
 type Config struct {
-	PoolSize        int `json:"task_num"`
+	PoolSize        int `json:"pool_size"`
 	TaskFuncWithArg func(arg interface{})
 }

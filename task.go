@@ -2,10 +2,11 @@ package zdpgo_task
 
 import (
 	"context"
-	"github.com/zhangdapeng520/zdpgo_log"
-	"github.com/zhangdapeng520/zdpgo_task/ants"
 	"sync"
 	"time"
+
+	"github.com/zhangdapeng520/zdpgo_log"
+	"github.com/zhangdapeng520/zdpgo_task/ants"
 )
 
 /*
@@ -64,6 +65,7 @@ func (t *Task) AddTask(taskFunc func()) {
 
 // AddTaskWithArg 添加携带参数的任务
 func (t *Task) AddTaskWithArg(arg interface{}) {
+	t.Wg.Add(1)
 	err := t.PoolWithFunc.Invoke(arg)
 	if err != nil {
 		t.Log.Error("添加带参数任务失败", "error", err, "arg", arg)
