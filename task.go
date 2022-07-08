@@ -2,11 +2,11 @@ package zdpgo_task
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/zhangdapeng520/zdpgo_log"
-	"github.com/zhangdapeng520/zdpgo_task/ants"
+	"github.com/zhangdapeng520/zdpgo_pool_goroutine"
 )
 
 /*
@@ -18,22 +18,20 @@ import (
 */
 
 type Task struct {
-	Config       *Config        // 配置
-	Log          *zdpgo_log.Log // 日志
-	Pool         *ants.Pool
-	PoolWithFunc *ants.PoolWithFunc
+	Config       *Config // 配置
+	Pool         *zdpgo_pool_goroutine.Pool
+	PoolWithFunc *zdpgo_pool_goroutine.PoolWithFunc
 	Wg           *sync.WaitGroup
 }
 
-func New(log *zdpgo_log.Log) *Task {
-	return NewWithConfig(&Config{}, log)
+func New() *Task {
+	return NewWithConfig(&Config{})
 }
 
-func NewWithConfig(config *Config, log *zdpgo_log.Log) *Task {
+func NewWithConfig(config *Config) *Task {
 	t := &Task{}
 
 	// 实例化
-	t.Log = log
 	if config.PoolSize == 0 {
 		config.PoolSize = 333
 	}
@@ -41,11 +39,11 @@ func NewWithConfig(config *Config, log *zdpgo_log.Log) *Task {
 	t.Wg = new(sync.WaitGroup)
 
 	// 任务阻塞：等池中的任务执行完毕了，有空余goroutine可以用了再执行新的任务
-	t.Pool, _ = ants.NewPool(config.PoolSize, ants.WithNonblocking(false))
+	t.Pool, _ = zdpgo_pool_goroutine.NewPool(config.PoolSize, zdpgo_pool_goroutine.WithNonblocking(false))
 
 	// 添加带参数的任务
 	if config.TaskFuncWithArg != nil {
-		t.PoolWithFunc, _ = ants.NewPoolWithFunc(config.PoolSize, func(arg interface{}) {
+		t.PoolWithFunc, _ = zdpgo_pool_goroutine.NewPoolWithFunc(config.PoolSize, func(arg interface{}) {
 			config.TaskFuncWithArg(arg)
 			t.Wg.Done()
 		})
@@ -56,20 +54,22 @@ func NewWithConfig(config *Config, log *zdpgo_log.Log) *Task {
 }
 
 // AddTask 添加任务
-func (t *Task) AddTask(taskFunc func()) {
+func (t *Task) AddTask(taskFunc func()) error {
 	err := t.Pool.Submit(taskFunc)
 	if err != nil {
-		t.Log.Error("添加任务失败", "error", err)
+		return err
 	}
+	return nil
 }
 
 // AddTaskWithArg 添加携带参数的任务
-func (t *Task) AddTaskWithArg(arg interface{}) {
+func (t *Task) AddTaskWithArg(arg interface{}) error {
 	t.Wg.Add(1)
 	err := t.PoolWithFunc.Invoke(arg)
 	if err != nil {
-		t.Log.Error("添加带参数任务失败", "error", err, "arg", arg)
+		return err
 	}
+	return nil
 }
 
 func (t *Task) Close() {
@@ -83,22 +83,12 @@ func (t Task) GetGoroutineNum() int {
 	return t.Pool.Running()
 }
 
-// RunTimer 执行定时任务，任务会按照指定间隔时间重复执行
+// RunTimer 执行不带任何参数的定时任务
 // @param stopCh 退出通道，用于通知什么时候退出此任务
 // @param timerSeconds 定时间隔，每隔多久执行一次任务，单位毫秒
 // @param taskFunc 要执行的任务函数
-// @param exitFunc 退出任务之前要执行的函数列表
-func (t *Task) RunTimer(stopCh <-chan struct{}, timerMilliSeconds int, taskFunc func(...interface{}), exitFunc ...func()) {
+func (t *Task) RunTimer(stopCh <-chan struct{}, timerMilliSeconds int, taskFunc func()) {
 	go func() {
-		// 任务执行完毕之后的退出函数
-		defer func() {
-			if exitFunc != nil && len(exitFunc) > 0 {
-				for _, ef := range exitFunc {
-					ef()
-				}
-			}
-		}()
-
 		// 定时器
 		timer := time.NewTicker(time.Millisecond * time.Duration(timerMilliSeconds))
 
@@ -195,7 +185,7 @@ func (t *Task) RunExitTimeout(timeoutSecond int, taskFunc func(), taskFinishFunc
 		// 处理通道关闭触发的异常
 		defer func() {
 			if r := recover(); r != nil {
-				t.Log.Debug("向已关闭的通道写入数据", "error", r)
+				fmt.Println("向已关闭的通道写入数据：", r)
 			}
 		}()
 

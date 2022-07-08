@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/zhangdapeng520/zdpgo_log"
 	"github.com/zhangdapeng520/zdpgo_task"
 	"math/rand"
 	"time"
@@ -29,7 +28,7 @@ func main() {
 	task := zdpgo_task.NewWithConfig(&zdpgo_task.Config{
 		PoolSize:        100, // 最多同时执行100个任务
 		TaskFuncWithArg: myFunc,
-	}, zdpgo_log.Tmp)
+	})
 
 	// 释放协程池
 	defer task.Close()

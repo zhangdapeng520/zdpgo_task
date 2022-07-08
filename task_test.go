@@ -6,8 +6,6 @@ import (
 	"runtime"
 	"testing"
 	"time"
-
-	"github.com/zhangdapeng520/zdpgo_log"
 )
 
 /*
@@ -19,7 +17,7 @@ import (
 */
 
 func getTask() *Task {
-	return New(zdpgo_log.Tmp)
+	return New()
 }
 
 // 测试运行定时任务
@@ -35,7 +33,7 @@ func TestTask_RunTimer(t *testing.T) {
 
 	// 执行定时任务
 	fmt.Println(runtime.NumGoroutine())
-	task.RunTimer(quit, 1000, func(args ...interface{}) {
+	task.RunTimer(quit, 1000, func() {
 		fmt.Println("要执行的任务。。。。")
 	})
 	fmt.Println(runtime.NumGoroutine())
@@ -148,10 +146,35 @@ func TestTask_AddTaskWithArg(t *testing.T) {
 	task := NewWithConfig(&Config{
 		PoolSize:        100,
 		TaskFuncWithArg: func(arg interface{}) {},
-	}, zdpgo_log.Tmp)
+	})
 
 	// 普通任务
 	for i := 0; i < 100000; i++ {
+		task.AddTaskWithArg(i)
+	}
+	task.Wg.Wait()
+}
+
+func TestTask_AddTaskWithArg1(t *testing.T) {
+	task := NewWithConfig(&Config{
+		PoolSize:        100,
+		TaskFuncWithArg: func(arg interface{}) {},
+	})
+
+	// 任务组1
+	for i := 0; i < 100; i++ {
+		task.AddTaskWithArg(i)
+	}
+	task.Wg.Wait()
+
+	// 任务组2
+	for i := 0; i < 100; i++ {
+		task.AddTaskWithArg(i)
+	}
+	task.Wg.Wait()
+
+	// 任务组3
+	for i := 0; i < 100; i++ {
 		task.AddTaskWithArg(i)
 	}
 	task.Wg.Wait()
